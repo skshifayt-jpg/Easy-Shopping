@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Easy Shopping — Admin</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f4f0;color:#171717}
+header{background:#111;color:#fff;padding:16px 5%;display:flex;justify-content:space-between;align-items:center}.logo{font-size:24px;font-weight:800}.logo span{color:#d8b36a}
+.wrap{max-width:1000px;margin:auto;padding:25px 5%}.tabs{display:flex;gap:8px;margin-bottom:20px}.tab{border:0;padding:11px 16px;border-radius:6px;background:#ddd;cursor:pointer;font-weight:700}.tab.active{background:#111;color:#fff}
+.card{background:#fff;padding:20px;border-radius:10px;margin-bottom:20px;box-shadow:0 2px 12px #0001}.card h2{margin-top:0}
+input,select{width:100%;padding:12px;margin:6px 0 12px;border:1px solid #ddd;border-radius:6px;background:#fff}label{font-size:13px;font-weight:700}
+.btn{border:0;padding:12px 18px;border-radius:6px;background:#111;color:#fff;font-weight:700;cursor:pointer}.cancel{background:#777}.danger{background:#b3261e}.products{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.product{border:1px solid #eee;border-radius:8px;overflow:hidden}.pic{height:180px;background:#e7e5df;display:flex;align-items:center;justify-content:center;color:#888}.pic img{width:100%;height:100%;object-fit:cover}.info{padding:13px}.actions{display:flex;gap:7px;margin-top:10px}.actions button{flex:1;padding:9px;border:0;border-radius:5px;cursor:pointer;font-weight:700}
+.shop{display:none}.shop .hero{padding:35px 6%;background:linear-gradient(120deg,#eee7da,#fff)}.shop .hero h1{font-size:40px;margin:0 0 8px}.shop .hero span{color:#9a7539}.shop .section{padding:30px 6%}.shop .products{grid-template-columns:repeat(4,1fr)}.shop .add{width:100%;background:#111;color:#fff;border:0;padding:10px;border-radius:5px}
+.order{margin-top:25px}.wa{background:#168a45;color:white;border:0;padding:12px;width:100%;border-radius:6px;font-weight:700}
+.notice{padding:12px;background:#fff8df;border-radius:6px;font-size:13px;margin-bottom:18px}
+@media(max-width:750px){.products,.shop .products{grid-template-columns:repeat(2,1fr)}.pic{height:160px}}
+</style>
+</head>
+<body>
+<header><div class="logo">Easy <span>Shopping</span></div><div>Admin</div></header>
+
+<div class="wrap">
+<div class="tabs"><button class="tab active" onclick="show('admin',this)">⚙️ Admin Panel</button><button class="tab" onclick="show('shop',this)">🛍️ View Shop</button></div>
+
+<section id="admin">
+<div class="notice">আপনার product এখান থেকেই add করবেন। ছবি নির্বাচন করলে product card-এ ছবিটা দেখা যাবে।</div>
+<div class="card">
+<h2 id="formTitle">Add Product</h2>
+<form id="form">
+<label>Product Name</label><input id="name" required placeholder="যেমন: Premium Polo">
+<label>Price (৳)</label><input id="price" type="number" required placeholder="999">
+<label>Category</label><select id="cat"><option>T-Shirts</option><option>Shirts</option><option>Pants</option><option>Panjabi</option><option>Other</option></select>
+<label>Sizes</label><input id="sizes" placeholder="S, M, L, XL">
+<label>Product Image</label><input id="image" type="file" accept="image/*">
+<div class="actions"><button class="btn" type="submit">Save Product</button><button class="btn cancel" type="button" onclick="resetForm()">Clear</button></div>
+</form>
+</div>
+<div class="card"><h2>Your Products</h2><div class="products" id="adminProducts"></div></div>
+</section>
+
+<section id="shop" class="shop">
+<div class="hero"><h1>Style made <span>easy.</span></h1><p>Welcome to Easy Shopping — simple, stylish & affordable.</p></div>
+<div class="section"><h2>Our Collection</h2><div class="products" id="shopProducts"></div>
+<div class="card order"><h2>Place Order</h2><p>Cart: <b id="cartCount">0</b></p><input id="customer" placeholder="Your Name"><input id="phone" placeholder="Phone Number"><input id="address" placeholder="Delivery Address"><button class="wa" onclick="whatsapp()">Order via WhatsApp</button></div>
+</div></section>
+</div>
+
+<script>
+let products=JSON.parse(localStorage.getItem('easyShoppingProducts')||'[]'), editIndex=-1, cart=[];
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem('easyShoppingProducts',JSON.stringify(products))}
+function renderAdmin(){
+$('adminProducts').innerHTML=products.length?products.map((p,i)=>`<div class="product"><div class="pic">${p.img?`<img src="${p.img}">`:'No Image'}</div><div class="info"><b>${esc(p.name)}</b><br>৳ ${p.price}<br><small>${p.cat} · ${p.sizes||'All sizes'}</small><div class="actions"><button onclick="edit(${i})">Edit</button><button class="danger" onclick="del(${i})">Delete</button></div></div></div>`).join(''):'<p style="color:#777">No products yet. Add your first product above.</p>';
+}
+function renderShop(){
+$('shopProducts').innerHTML=products.length?products.map((p,i)=>`<div class="product"><div class="pic">${p.img?`<img src="${p.img}">`:'No Image'}</div><div class="info"><b>${esc(p.name)}</b><p>৳ ${p.price}</p><small>Sizes: ${p.sizes||'All sizes'}</small><button class="add" onclick="addCart(${i})">Add to Cart</button></div></div>`).join(''):'<p style="color:#777">No products added yet.</p>';
+}
+$('form').addEventListener('submit',e=>{
+e.preventDefault();
+const file=$('image').files[0];
+const finish=(img)=>{
+let p={name:$('name').value.trim(),price:$('price').value,cat:$('cat').value,sizes:$('sizes').value.trim(),img:img||''};
+if(editIndex<0) products.push(p); else {if(!img)p.img=products[editIndex].img;products[editIndex]=p}
+save();renderAdmin();renderShop();resetForm();alert('Product saved!');
+};
+if(file){let r=new FileReader();r.onload=()=>finish(r.result);r.readAsDataURL(file)}else finish('');
+});
+function edit(i){let p=products[i];editIndex=i;$('formTitle').textContent='Edit Product';$('name').value=p.name;$('price').value=p.price;$('cat').value=p.cat;$('sizes').value=p.sizes;scrollTo(0,0)}
+function del(i){if(confirm('Delete this product?')){products.splice(i,1);save();renderAdmin();renderShop()}}
+function resetForm(){editIndex=-1;$('formTitle').textContent='Add Product';$('form').reset()}
+function addCart(i){cart.push(products[i]);$('cartCount').textContent=cart.length;alert('Added to cart!')}
+function whatsapp(){
+if(!cart.length)return alert('Add a product first.');
+let n=$('customer').value.trim(),ph=$('phone').value.trim(),a=$('address').value.trim();
+if(!n||!ph||!a)return alert('Please fill Name, Phone and Address.');
+let text='Easy Shopping Order%0A%0A'+cart.map(p=>p.name+' - ৳'+p.price).join('%0A')+'%0A%0AName: '+encodeURIComponent(n)+'%0APhone: '+encodeURIComponent(ph)+'%0AAddress: '+encodeURIComponent(a);
+let number='8801XXXXXXXXX'; // CHANGE THIS to your WhatsApp number
+window.open('https://wa.me/'+number+'?text='+text,'_blank');
+}
+function show(which,btn){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');$('admin').style.display=which==='admin'?'block':'none';$('shop').style.display=which==='shop'?'block':'none'}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+renderAdmin();renderShop();
+</script>
+</body>
+</html>
